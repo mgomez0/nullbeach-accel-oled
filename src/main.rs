@@ -1,6 +1,3 @@
-//! Blinks the LED on a Pico board
-//!
-//! This will blink an LED attached to GP25, which is the pin the Pico uses for the on-board LED.
 #![no_std]
 #![no_main]
 
@@ -32,7 +29,7 @@ use bsp::hal::fugit::RateExtU32;
 
 // Panic handler
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
@@ -100,37 +97,28 @@ fn main() -> ! {
         Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0).into_terminal_mode();
 
     display.init().unwrap();
-    let _ = display.clear();
 
-    let mut buffer: [f32; 32] = [0.0; 32];
     loop {
         let _ = display.clear();
 
-        let acc = mpu.get_acc_angles().unwrap();
-        defmt::info!("r/p: {}", defmt::Debug2Format(&acc));
-
-        let _ = display.write_str("r/p: ");
-
-        buffer[0] = acc.x;
-        buffer[1] = acc.y;
-
-        // need to somehow write the contents of the buffer to the display??
-        // let _ = display.write_str(&buffer[0].to_string());
-        // maybe something like
-        // let _ = display.write_str(unsafe { core::str::from_utf8_unchecked(...)}); // or something like that
-
         let temp = mpu.get_temp().unwrap();
         defmt::info!("temp: {}°C", defmt::Debug2Format(&temp));
+        let _ = display.write_str("temp:");
+        let _ = writeln!(display, "{:.1}°C", temp);
 
         // get gyro data, scaled with sensitivity
         let gyro = mpu.get_gyro().unwrap();
         defmt::info!("gyro: {}", defmt::Debug2Format(&gyro));
+        let _ = display.write_str("gyro:\n");
+        let _ = writeln!(display, "{:.1}, {:.1}, {:.1}", gyro.x, gyro.y, gyro.z);
 
         // get accelerometer data, scaled with sensitivity
-        let acc = mpu.get_acc().unwrap();
-        defmt::info!("acc: {}", defmt::Debug2Format(&acc));
+        let acc = mpu.get_acc_angles().unwrap();
+        defmt::info!("r/p: {}", defmt::Debug2Format(&acc));
+        let _ = display.write_str("acc:\n");
+        let _ = writeln!(display, "{:.1}, {:.1}", acc.x, acc.y);
 
-        delay.delay_ms(500_u32);
+        delay.delay_ms(250_u32);
     }
 }
 
